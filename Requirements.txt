@@ -1,5 +1,4 @@
 python==3.9
-geopandas==0.9.0
 streamlit==0.75.0
 numpy==1.18.5
 pandas==1.0.5
