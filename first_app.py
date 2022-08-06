@@ -1,3 +1,5 @@
+pip install -r requirements.txt
+
 import geopandas as gpd
 import os
 import streamlit as st
