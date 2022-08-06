@@ -1,11 +1,11 @@
 import os
-import geopandas as gpd
 import streamlit as st
 import pandas as pd
 import numpy as np
 import folium
 from streamlit_folium import folium_static
 from branca.element import Template, MacroElement
+import geopandas as gpd
 
 st.set_page_config(
     page_title="Rijksmonumentdichtheid van Nederland",
