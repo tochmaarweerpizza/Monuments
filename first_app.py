@@ -1,8 +1,8 @@
+import geopandas as gpd
 import os
 import streamlit as st
 import pandas as pd
 import numpy as np
-import geopandas as gpd
 import folium
 from streamlit_folium import folium_static
 from branca.element import Template, MacroElement
@@ -150,18 +150,6 @@ m = folium.Map(zoom_start=zoomstart,
 # .add_to(f)
 
 if map_type == 'landelijke dichtheid':
-#     choropleth = folium.Choropleth(geo_data = monuments_df, 
-#              data=monuments_df,
-#              columns=['naam', 'aantal_monumenten_binnen_categorie'],
-#              key_on='feature.properties.naam',
-# #              threshold_scale=list(scale),
-# #              fill_color='YlGnBu',
-# #             fill_opacity=0.5,
-#              line_opacity=0.2,
-#              # line_color="black",
-# #              legend_name='Aantal monumenten in de gekozen categorie',
-#              smooth_factor=1).add_to(m)
-
 
     def style_function(feature):
         area = int(feature['properties']['aantal_monumenten_binnen_categorie'])
@@ -182,10 +170,6 @@ if map_type == 'landelijke dichtheid':
     choropleth.add_child(
     folium.features.GeoJsonTooltip(['naam', 'aantal monumenten'])
     )
-    
-#     for key in choropleth._children:
-#         if key.startswith('color_map'):
-#             del(choropleth._children[key])
         
     choropleth.add_to(m)
     
@@ -304,10 +288,6 @@ else:
 
 
 folium_static(m, height = 750)
-
-
-
-# test = st_folium(m)
 
 if map_type == 'landelijke dichtheid':
     
