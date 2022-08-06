@@ -1,11 +1,6 @@
-
-import conda
 import os
 
-conda_file_dir = conda.__file__
-conda_dir = conda_file_dir.split('lib')[0]
-proj_lib = os.path.join(os.path.join(conda_dir, 'share'), 'proj')
-os.environ["PROJ_LIB"] = proj_lib
+os.environ['PROJ_LIB'] = '/anaconda3/envs/streamlit_app/share/proj'
 
 import geopandas as gpd
 import streamlit as st
