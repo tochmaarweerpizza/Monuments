@@ -287,7 +287,7 @@ else:
         marker.add_to(m)
 
 
-folium_static(m, height = 750)
+folium_static(m)
 
 if map_type == 'landelijke dichtheid':
     
