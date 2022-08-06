@@ -1,7 +1,4 @@
 import os
-
-os.environ['PROJ_LIB'] = '/anaconda3/envs/streamlit_app/share/proj'
-
 import geopandas as gpd
 import streamlit as st
 import pandas as pd
