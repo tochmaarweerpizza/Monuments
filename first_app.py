@@ -133,21 +133,12 @@ if map_type == 'landelijke dichtheid':
     
         legend_list.append("".join(['(', str(numfrom), ', ', str(numto), ']']))
     legend_list.insert(0, 'geen monumenten')
-        
-#     monuments_df['FillColor'] = None
-#     for i in range(len(scale)):
-#         monuments_df[monuments_df['aantal_monumenten_binnen_categorie'] <= scale[i]]['FillColor'] = i
-#     monuments_df['FillColor'] = [random.choice(range(5)) for i in range(len(monuments_df))]
-    
-
-# f = folium.Figure(width=700, height = 500)
 
 m = folium.Map(zoom_start=zoomstart,
                location = [y_center_coord, x_center_coord],
                tiles='https://api.mapbox.com/styles/v1/ivo11235/ckjx01y2e1brw17nqdictt5wk/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoiaXZvMTEyMzUiLCJhIjoieV82bFVfNCJ9.G8mrfJOA07edDDj6Bep2bQ',
                attr='© <a href="https://www.mapbox.com/about/maps/">Mapbox</a> © <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> <a href="https://www.mapbox.com/map-feedback/">(Improve this map)</a>'
 )
-# .add_to(f)
 
 if map_type == 'landelijke dichtheid':
 
@@ -206,7 +197,7 @@ if map_type == 'landelijke dichtheid':
  
 <div id='maplegend' class='maplegend' 
     style='position: absolute; z-index:9999; border:2px solid grey; background-color:rgba(255, 255, 255, 0.8);
-     border-radius:6px; padding: 10px; font-size:14px; right: 20px; bottom: 20px;'>
+     border-radius:6px; padding: 10px; font-size:14px; left: 20px; bottom: 20px;'>
      
 <div class='legend-title'>Aantal monumenten (o.b.v. berekening)</div>
 <div class='legend-scale'>
