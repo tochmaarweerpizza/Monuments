@@ -23,7 +23,7 @@ map_type = st.sidebar.selectbox(
 
 if map_type == 'monumentlocaties per gemeente':
     
-    @st.cache
+    @st.cache(max_entries=10)
     def load_data1():
         data1 = gpd.read_file(os.path.join(os.getcwd(), "monuments_dashboard_data", "monuments_municipality_lookup.geojson"))
         return data1
@@ -44,14 +44,14 @@ if map_type == 'monumentlocaties per gemeente':
     
 else:
     
-    @st.cache
+    @st.cache(max_entries=10)
     def load_data2():
         data2 = gpd.read_file(os.path.join(os.getcwd(), "monuments_dashboard_data", "municipal_monument_count.geojson")) 
         return data2
     
     monuments_df = load_data2().copy()
     
-    @st.cache
+    @st.cache(max_entries=10)
     def load_data3():
         data3 = pd.read_csv(os.path.join(os.getcwd(), "monuments_dashboard_data", "monument_category_column_mapping.csv"))
         return data3
