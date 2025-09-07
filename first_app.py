@@ -35,7 +35,10 @@ map_type = st.sidebar.selectbox(
 # -----------------------
 @st.cache_data
 def load_geojson(path):
-    return gpd.read_file(path)
+    gdf = gpd.read_file(path)
+    gdf = gdf.to_crs(epsg=4326)  # CRS fix
+    gdf = gdf[gdf.geometry.notnull()]
+    return gdf
 
 @st.cache_data
 def load_csv(path):
@@ -49,11 +52,10 @@ if map_type == 'monumentlocaties per gemeente':
         np.sort(monument_lookup_df['naam'].unique())
     )
     ml_mun_df = monument_lookup_df[monument_lookup_df['naam'] == gemeente].copy()
-    ml_mun_df = ml_mun_df[ml_mun_df.is_valid]
 
     # Center coordinaten
-    x_center_coord = np.median(ml_mun_df.geometry.centroid.to_crs('epsg:4326').x)
-    y_center_coord = np.mean(ml_mun_df.geometry.centroid.to_crs('epsg:4326').y)
+    x_center_coord = np.median(ml_mun_df.geometry.centroid.x)
+    y_center_coord = np.mean(ml_mun_df.geometry.centroid.y)
     zoomstart = 12  # gemeente-focus
 
     main_categories = np.insert(np.sort(ml_mun_df['hoofdcategorie'].unique()), 0, 'Alles')
@@ -61,14 +63,13 @@ if map_type == 'monumentlocaties per gemeente':
 else:
     monuments_df = load_geojson(os.path.join(os.getcwd(), "monuments_dashboard_data", "municipal_monument_count.geojson"))
     column_mapping_df = load_csv(os.path.join(os.getcwd(), "monuments_dashboard_data", "monument_category_column_mapping.csv"))
-    monuments_df = monuments_df[monuments_df.is_valid]
 
     main_categories = np.insert(np.sort(column_mapping_df['hoofdcategorie'].unique()), 0, 'Alles')
 
     # Center coordinaten
-    x_center_coord = np.median(monuments_df.centroid.to_crs('epsg:4326').x)
-    y_center_coord = np.mean(monuments_df.centroid.to_crs('epsg:4326').y)
-    zoomstart = 8  # landelijke dichtheid iets verder ingezoomd
+    x_center_coord = np.median(monuments_df.centroid.x)
+    y_center_coord = np.mean(monuments_df.centroid.y)
+    zoomstart = 7.5 # landelijke dichtheid iets verder ingezoomd
 
     col_list = ["#FCFFC9", "#E8C167", "#D67500", "#913640", "#1D0B14"]
 
@@ -107,7 +108,7 @@ if map_type == 'landelijke dichtheid':
     if function == 'afgerond aantal per 100.000 inwoners':
         monuments_df['aantal_monumenten_binnen_categorie'] = monuments_df['aantal_monumenten_binnen_categorie'] / monuments_df['TotaleBevolking_1'] * 100000
 
-    monuments_df['aantal_monumenten_binnen_categorie_display'] = monuments_df['aantal_monumenten_binnen_categorie'].round(0).astype(float)
+    monuments_df['aantal_monumenten_binnen_categorie_display'] = np.round(monuments_df['aantal_monumenten_binnen_categorie'], 0)
 
     # Schaalverdeling
     if label_classification == 'kwartielen':
@@ -126,8 +127,8 @@ if map_type == 'landelijke dichtheid':
             numfrom = int(scale[i-1])
             numto = int(scale[i])
         else:
-            numfrom = round(scale[i-1],1)
-            numto = round(scale[i],1)
+            numfrom = np.round(scale[i-1],1)
+            numto = np.round(scale[i],1)
         legend_list.append(f"({numfrom}, {numto}]")
     legend_list.insert(0,'geen monumenten')
 
@@ -137,13 +138,13 @@ if map_type == 'landelijke dichtheid':
 m = folium.Map(
     location=[y_center_coord, x_center_coord],
     zoom_start=zoomstart,
-    tiles='Cartodb positron'
+    tiles='CartoDB positron'  # neutrale grijstinten-kaart
 )
 
 if map_type == 'landelijke dichtheid':
     def style_function(feature):
         area = feature['properties'].get('aantal_monumenten_binnen_categorie', 0)
-        if area is None or np.isnan(area) or area == 0:
+        if area == 0:
             color = "#cccccc"
         elif area <= scale[1]:
             color = col_list[0]
@@ -163,7 +164,7 @@ if map_type == 'landelijke dichtheid':
         tooltip=folium.GeoJsonTooltip(
             fields=['naam','aantal_monumenten_binnen_categorie_display'],
             aliases=['Gemeente','Aantal monumenten'],
-            localize=False
+            localize=True
         )
     )
     choropleth.add_to(m)
@@ -201,8 +202,8 @@ st_data = st_folium(m, width="100%", height=800)
 # Sidebar: top-gemeenten of totaal aantal
 # -----------------------
 if map_type == 'landelijke dichtheid':
-    totaal_monumenten = int(monuments_df['aantal_monumenten_binnen_categorie'].sum())
-    st.sidebar.markdown(f"**Totaal aantal monumenten (huidige selectie): {totaal_monumenten:,}**".replace(",", "."))
+    totaal_monumenten = monuments_df['aantal_monumenten_binnen_categorie'].sum()
+    st.sidebar.markdown(f"**Totaal aantal monumenten (huidige selectie): {int(totaal_monumenten):n}**")
 
     mon_ordered_df = monuments_df[['naam','aantal_monumenten_binnen_categorie_display']] \
         .sort_values('aantal_monumenten_binnen_categorie_display', ascending=False) \
@@ -212,13 +213,13 @@ if map_type == 'landelijke dichtheid':
     mon_ordered_df['% van landelijk totaal'] = mon_ordered_df['aantal'] / mon_ordered_df['aantal'].sum()
 
     # Nederlandse notatie
-    mon_ordered_df['aantal'] = mon_ordered_df['aantal'].astype(int).apply(lambda x: f"{x:,}".replace(",", "."))
+    mon_ordered_df['aantal'] = mon_ordered_df['aantal'].apply(lambda x: f"{x:n}")
     mon_ordered_df['% van landelijk totaal'] = mon_ordered_df['% van landelijk totaal'].apply(
         lambda x: f"{x:.1%}".replace(".", ",").replace("%", "%"))
 
-    st.sidebar.write("Monumentrijkste gemeenten")
+    st.sidebar.write("# Monumentrijkste gemeenten")
     st.sidebar.table(mon_ordered_df)
 
 else:
     totaal_monumenten = ml_mun_df.shape[0]
-    st.sidebar.markdown(f"**Totaal aantal monumenten in selectie: {totaal_monumenten:,}**".replace(",", "."))
+    st.sidebar.markdown(f"**Totaal aantal monumenten in selectie: {totaal_monumenten:n}**")
