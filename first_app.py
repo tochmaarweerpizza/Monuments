@@ -35,15 +35,15 @@ map_type = st.sidebar.selectbox(
 # -----------------------
 @st.cache_data
 def load_geojson(path):
-    gdf = gpd.read_file(path)
-    gdf = gdf.to_crs(epsg=4326)  # CRS fix
-    gdf = gdf[gdf.geometry.notnull()]
-    return gdf
+    return gpd.read_file(path)
 
 @st.cache_data
 def load_csv(path):
     return pd.read_csv(path)
 
+# -----------------------
+# Data & main_categories definiëren
+# -----------------------
 if map_type == 'monumentlocaties per gemeente':
     monument_lookup_df = load_geojson(os.path.join(os.getcwd(), "monuments_dashboard_data", "monuments_municipality_lookup.geojson"))
     
@@ -53,10 +53,11 @@ if map_type == 'monumentlocaties per gemeente':
     )
     ml_mun_df = monument_lookup_df[monument_lookup_df['naam'] == gemeente].copy()
 
-    # Center coordinaten
-    x_center_coord = np.median(ml_mun_df.geometry.centroid.x)
-    y_center_coord = np.mean(ml_mun_df.geometry.centroid.y)
-    zoomstart = 12  # gemeente-focus
+    # CRS-safe centroids
+    centroids = ml_mun_df.to_crs('epsg:4326').geometry.centroid
+    x_center_coord = np.median(centroids.x)
+    y_center_coord = np.mean(centroids.y)
+    zoomstart = 12
 
     main_categories = np.insert(np.sort(ml_mun_df['hoofdcategorie'].unique()), 0, 'Alles')
 
@@ -64,19 +65,16 @@ else:
     monuments_df = load_geojson(os.path.join(os.getcwd(), "monuments_dashboard_data", "municipal_monument_count.geojson"))
     column_mapping_df = load_csv(os.path.join(os.getcwd(), "monuments_dashboard_data", "monument_category_column_mapping.csv"))
 
+    centroids = monuments_df.to_crs('epsg:4326').centroid
+    x_center_coord = np.median(centroids.x)
+    y_center_coord = np.mean(centroids.y)
+    zoomstart = 7.5
+
     main_categories = np.insert(np.sort(column_mapping_df['hoofdcategorie'].unique()), 0, 'Alles')
-
-    # Center coordinaten
-    x_center_coord = np.median(monuments_df.centroid.x)
-    y_center_coord = np.mean(monuments_df.centroid.y)
-    zoomstart = 7.5 # landelijke dichtheid iets verder ingezoomd
-
-    col_list = ["#FCFFC9", "#E8C167", "#D67500", "#913640", "#1D0B14"]
 
 # -----------------------
 # Sidebar: categorieën
 # -----------------------
-st.sidebar.write("### Selecteer een monumentcategorie")
 categorie = st.sidebar.selectbox("Hoofdcategorie", main_categories)
 
 if categorie != 'Alles':
@@ -95,10 +93,9 @@ if categorie != 'Alles':
             column_mapping_df = column_mapping_df[column_mapping_df['subcategorie'] == subcategorie].copy()
 
 # -----------------------
-# Landelijke dichtheid: berekening
+# Landelijke dichtheid berekenen
 # -----------------------
 if map_type == 'landelijke dichtheid':
-    st.sidebar.write("### Berekening")
     function = st.sidebar.selectbox("Absoluut of relatief", ('totaal aantal', 'afgerond aantal per 100.000 inwoners'))
     label_classification = st.sidebar.selectbox("Schaalverdeling kaart", ('kwartielen', 'gelijke intervals', 'machten van 10'))
 
@@ -121,14 +118,12 @@ if map_type == 'landelijke dichtheid':
         scale.insert(0,0)
     scale = sorted(list(set(scale)))
 
+    col_list = ["#FCFFC9", "#E8C167", "#D67500", "#913640", "#1D0B14"]
+
     legend_list = []
     for i in range(1,len(scale)):
-        if (label_classification=='kwartielen') & (function=='totaal aantal'):
-            numfrom = int(scale[i-1])
-            numto = int(scale[i])
-        else:
-            numfrom = np.round(scale[i-1],1)
-            numto = np.round(scale[i],1)
+        numfrom = int(scale[i-1]) if function=='totaal aantal' else np.round(scale[i-1],1)
+        numto = int(scale[i]) if function=='totaal aantal' else np.round(scale[i],1)
         legend_list.append(f"({numfrom}, {numto}]")
     legend_list.insert(0,'geen monumenten')
 
@@ -138,7 +133,7 @@ if map_type == 'landelijke dichtheid':
 m = folium.Map(
     location=[y_center_coord, x_center_coord],
     zoom_start=zoomstart,
-    tiles='CartoDB positron'  # neutrale grijstinten-kaart
+    tiles='CartoDB positron'  # lichtgrijs, cloud-proof
 )
 
 if map_type == 'landelijke dichtheid':
@@ -197,29 +192,3 @@ else:
 # Render kaart
 # -----------------------
 st_data = st_folium(m, width="100%", height=800)
-
-# -----------------------
-# Sidebar: top-gemeenten of totaal aantal
-# -----------------------
-if map_type == 'landelijke dichtheid':
-    totaal_monumenten = monuments_df['aantal_monumenten_binnen_categorie'].sum()
-    st.sidebar.markdown(f"**Totaal aantal monumenten (huidige selectie): {int(totaal_monumenten):n}**")
-
-    mon_ordered_df = monuments_df[['naam','aantal_monumenten_binnen_categorie_display']] \
-        .sort_values('aantal_monumenten_binnen_categorie_display', ascending=False) \
-        .rename({'aantal_monumenten_binnen_categorie_display':'aantal'}, axis=1) \
-        .reset_index(drop=True)
-    mon_ordered_df.index = np.arange(1, len(mon_ordered_df)+1)
-    mon_ordered_df['% van landelijk totaal'] = mon_ordered_df['aantal'] / mon_ordered_df['aantal'].sum()
-
-    # Nederlandse notatie
-    mon_ordered_df['aantal'] = mon_ordered_df['aantal'].apply(lambda x: f"{x:n}")
-    mon_ordered_df['% van landelijk totaal'] = mon_ordered_df['% van landelijk totaal'].apply(
-        lambda x: f"{x:.1%}".replace(".", ",").replace("%", "%"))
-
-    st.sidebar.write("# Monumentrijkste gemeenten")
-    st.sidebar.table(mon_ordered_df)
-
-else:
-    totaal_monumenten = ml_mun_df.shape[0]
-    st.sidebar.markdown(f"**Totaal aantal monumenten in selectie: {totaal_monumenten:n}**")
