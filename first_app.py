@@ -9,6 +9,20 @@ from streamlit_folium import st_folium
 from branca.element import Template, MacroElement
 
 # -----------------------
+# Nederlandse getalweergave
+# -----------------------
+import locale
+try:
+    locale.setlocale(locale.LC_ALL, 'nl_NL.UTF-8')
+    def format_nl(number, decimals=0):
+        return locale.format_string(f"%.{decimals}f", number, grouping=True)
+except locale.Error:
+    def format_nl(number, decimals=0):
+        s = f"{number:,.{decimals}f}"
+        s = s.replace(',', 'X').replace('.', ',').replace('X', '.')
+        return s
+
+# -----------------------
 # Paginaconfiguratie
 # -----------------------
 st.set_page_config(
@@ -126,7 +140,7 @@ if map_type == 'landelijke dichtheid':
         else:
             numfrom = np.round(scale[i-1],1)
             numto = np.round(scale[i],1)
-        legend_list.append(f"({numfrom}, {numto}]")
+        legend_list.append(f"({format_nl(numfrom)}, {format_nl(numto)}]")
     legend_list.insert(0,'geen monumenten')
 
 # -----------------------
@@ -161,7 +175,9 @@ if map_type == 'landelijke dichtheid':
         tooltip=folium.GeoJsonTooltip(
             fields=['naam','aantal_monumenten_binnen_categorie_display'],
             aliases=['Gemeente','Aantal monumenten'],
-            localize=True
+            localize=False,
+            labels=True,
+            sticky=True
         )
     )
     choropleth.add_to(m)
@@ -200,7 +216,7 @@ st_data = st_folium(m, width="100%", height=800)
 # -----------------------
 if map_type == 'landelijke dichtheid':
     totaal_monumenten = monuments_df['aantal_monumenten_binnen_categorie'].sum()
-    st.sidebar.markdown(f"**Totaal aantal monumenten (huidige selectie): {int(totaal_monumenten):n}**")
+    st.sidebar.markdown(f"**Totaal aantal monumenten (huidige selectie): {format_nl(totaal_monumenten)}**")
 
     mon_ordered_df = monuments_df[['naam','aantal_monumenten_binnen_categorie_display']] \
         .sort_values('aantal_monumenten_binnen_categorie_display', ascending=False) \
@@ -209,8 +225,8 @@ if map_type == 'landelijke dichtheid':
     mon_ordered_df.index = np.arange(1, len(mon_ordered_df)+1)
     mon_ordered_df['% van landelijk totaal'] = mon_ordered_df['aantal'] / mon_ordered_df['aantal'].sum()
 
-    # Nederlandse notatie
-    mon_ordered_df['aantal'] = mon_ordered_df['aantal'].apply(lambda x: f"{x:n}")
+    # Nederlandse notatie toepassen
+    mon_ordered_df['aantal'] = mon_ordered_df['aantal'].apply(lambda x: format_nl(x))
     mon_ordered_df['% van landelijk totaal'] = mon_ordered_df['% van landelijk totaal'].apply(
         lambda x: f"{x:.1%}".replace(".", ",").replace("%", "%"))
 
@@ -219,4 +235,4 @@ if map_type == 'landelijke dichtheid':
 
 else:
     totaal_monumenten = ml_mun_df.shape[0]
-    st.sidebar.markdown(f"**Totaal aantal monumenten in selectie: {totaal_monumenten:n}**")
+    st.sidebar.markdown(f"**Totaal aantal monumenten in selectie: {format_nl(totaal_monumenten)}**")
