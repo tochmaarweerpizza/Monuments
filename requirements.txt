@@ -4,5 +4,6 @@ folium==0.15.0
 branca==0.6.0
 pandas==2.3.2
 numpy==1.26.4
-geopandas==1.2.2
+geopandas==1.1.1
+
 
