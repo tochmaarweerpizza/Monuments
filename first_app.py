@@ -1,6 +1,5 @@
 import os
 import streamlit as st
-import pandas as pd
 import geopandas as gpd
 import folium
 import numpy as np
@@ -26,27 +25,24 @@ monuments_df = load_geojson(monuments_path)
 # -----------------------
 # Subset voor testen
 # -----------------------
-# Neem een kleine sample (bv. 50 polygonen) voor cloud test
 test_monuments_df = monuments_df.sample(min(50, len(monuments_df)), random_state=42).copy()
 
 # -----------------------
 # Centroid bepalen voor center van de kaart
 # -----------------------
-# Converteer eerst naar een projected CRS om waarschuwingen te vermijden
-test_monuments_df_proj = test_monuments_df.to_crs(epsg=3857)  # Web Mercator
-x_center_coord = test_monuments_df_proj.geometry.centroid.x.median()
-y_center_coord = test_monuments_df_proj.geometry.centroid.y.median()
+# Projecteer naar een projected CRS om juiste centroid te krijgen
+test_monuments_df_proj = test_monuments_df.to_crs(epsg=3857)
+centroid_proj = test_monuments_df_proj.geometry.centroid
 # Terug naar lat/lon
-import pyproj
-from shapely.ops import transform
-project = pyproj.Transformer.from_crs("epsg:3857", "epsg:4326", always_xy=True).transform
-center_lon, center_lat = transform(project, type('dummy', (object,), {'x': x_center_coord, 'y': y_center_coord})())
+centroid_latlon = centroid_proj.to_crs(epsg=4326)
+x_center_coord = centroid_latlon.x.median()
+y_center_coord = centroid_latlon.y.median()
 
 # -----------------------
 # Folium kaart maken
 # -----------------------
 m = folium.Map(
-    location=[center_lat, center_lon],
+    location=[y_center_coord, x_center_coord],
     zoom_start=7.5,
     tiles='CartoDB Positron'
 )
@@ -55,7 +51,7 @@ m = folium.Map(
 folium.GeoJson(test_monuments_df).add_to(m)
 
 # -----------------------
-# Render kaart in Streamlit via HTML (om st_folium probleem te vermijden)
+# Render kaart in Streamlit via HTML
 # -----------------------
 st.components.v1.html(m._repr_html_(), height=800, scrolling=True)
 
