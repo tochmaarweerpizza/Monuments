@@ -28,9 +28,15 @@ monuments_df = load_geojson(os.path.join(os.getcwd(), "monuments_dashboard_data"
 monuments_df = monuments_df[~monuments_df.geometry.isna()].copy()
 monuments_df = monuments_df.to_crs(epsg=4326)
 
-# Voeg kolom "aantal_monumenten_binnen_categorie" toe als voorbeeld
-# Hier kun je aanpassen aan je selectie
-monuments_df['aantal_monumenten_binnen_categorie'] = monuments_df['totaal_monumenten']
+# -----------------------
+# Bepaal kolom aantal monumenten
+# -----------------------
+# Gebruik hier de eerste numerieke kolom als test (bijv. totaal aantal)
+numerical_cols = monuments_df.select_dtypes(include=np.number).columns.tolist()
+if len(numerical_cols) == 0:
+    st.error("Geen numerieke kolommen gevonden in geojson!")
+else:
+    monuments_df['aantal_monumenten_binnen_categorie'] = monuments_df[numerical_cols[0]]
 
 # -----------------------
 # Bepaal middelpunt en zoom
