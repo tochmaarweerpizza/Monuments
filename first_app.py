@@ -48,51 +48,62 @@ test_monuments_df, map_center = prepare_geo(monuments_df)
 # -----------------------
 st.sidebar.header("Kleurenschaal instellingen")
 
-col_name = "totaal_monumenten"  # pas aan indien nodig
+# Alle numerieke kolommen ophalen
+numeric_cols = test_monuments_df.select_dtypes(include=["int", "float"]).columns.tolist()
 
-# Kies methode voor schaalverdeling
-scale_type = st.sidebar.selectbox(
-    "Kies schaalverdeling",
-    ["Kwantielen", "Gelijke intervallen", "Standaard (min-max)"]
-)
+if not numeric_cols:
+    st.error("Geen numerieke kolommen gevonden in de GeoJSON!")
+else:
+    col_name = st.sidebar.selectbox("Kies variabele voor kleurenschaal", numeric_cols)
 
-values = test_monuments_df[col_name].dropna().astype(float)
+    # Kies methode voor schaalverdeling
+    scale_type = st.sidebar.selectbox(
+        "Kies schaalverdeling",
+        ["Kwantielen", "Gelijke intervallen", "Standaard (min-max)"]
+    )
 
-if scale_type == "Kwantielen":
-    thresholds = list(values.quantile([0, 0.2, 0.4, 0.6, 0.8, 1]))
-elif scale_type == "Gelijke intervallen":
-    thresholds = list(np.linspace(values.min(), values.max(), 6))
-else:  # standaard min-max
-    thresholds = [values.min(), values.max()/4, values.max()/2, 3*values.max()/4, values.max()]
+    values = test_monuments_df[col_name].dropna().astype(float)
 
-# Zorg dat waarden uniek zijn en gesorteerd
-thresholds = sorted(list(set([round(v, 2) for v in thresholds])))
+    if scale_type == "Kwantielen":
+        thresholds = list(values.quantile([0, 0.2, 0.4, 0.6, 0.8, 1]))
+    elif scale_type == "Gelijke intervallen":
+        thresholds = list(np.linspace(values.min(), values.max(), 6))
+    else:  # standaard min-max
+        thresholds = [
+            values.min(),
+            values.max()/4,
+            values.max()/2,
+            3*values.max()/4,
+            values.max()
+        ]
 
-# -----------------------
-# Folium kaart maken
-# -----------------------
-m = folium.Map(
-    location=map_center,
-    zoom_start=7.5,
-    tiles='CartoDB Positron'
-)
+    thresholds = sorted(list(set([round(v, 2) for v in thresholds])))
 
-folium.Choropleth(
-    geo_data=test_monuments_df,
-    data=test_monuments_df,
-    columns=["id", col_name],   # let op: id moet bestaan
-    key_on="feature.properties.id",
-    fill_color="YlOrRd",
-    fill_opacity=0.7,
-    line_opacity=0.2,
-    threshold_scale=thresholds,
-    legend_name="Aantal monumenten"
-).add_to(m)
+    # -----------------------
+    # Folium kaart maken
+    # -----------------------
+    m = folium.Map(
+        location=map_center,
+        zoom_start=7.5,
+        tiles='CartoDB Positron'
+    )
 
-# -----------------------
-# Render kaart
-# -----------------------
-st.components.v1.html(m._repr_html_(), height=800, scrolling=True)
+    folium.Choropleth(
+        geo_data=test_monuments_df,
+        data=test_monuments_df,
+        columns=["id", col_name],   # id moet bestaan in je GeoJSON
+        key_on="feature.properties.id",
+        fill_color="YlOrRd",
+        fill_opacity=0.7,
+        line_opacity=0.2,
+        threshold_scale=thresholds,
+        legend_name=col_name
+    ).add_to(m)
 
-# Info in sidebar
-st.sidebar.markdown(f"**Test met {len(test_monuments_df)} polygonen**")
+    # -----------------------
+    # Render kaart
+    # -----------------------
+    st.components.v1.html(m._repr_html_(), height=800, scrolling=True)
+
+    # Info in sidebar
+    st.sidebar.markdown(f"**Test met {len(test_monuments_df)} polygonen**")
