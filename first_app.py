@@ -32,9 +32,9 @@ monuments_df = load_geojson(monuments_path)
 # Voorbereiden subset (1x cachen)
 # -----------------------
 @st.cache_data
-def prepare_geo(df, n=50):
+def prepare_geo(_df, n=50):
     # Neem sample
-    test_df = df.sample(min(n, len(df)), random_state=42).copy()
+    test_df = _df.sample(min(n, len(_df)), random_state=42).copy()
     # Projecteer voor centroid
     test_df_proj = test_df.to_crs(epsg=3857)
     centroid = test_df_proj.geometry.centroid.to_crs(epsg=4326)
