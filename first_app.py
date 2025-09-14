@@ -26,11 +26,10 @@ y_center_coord = (bounds[1] + bounds[3]) / 2
 # Folium map
 m = folium.Map(location=[y_center_coord, x_center_coord], zoom_start=7.5, tiles='CartoDB Positron')
 
-# Schaalverdeling
+# Schaalverdeling en Choropleth
 col_list = ["#FCFFC9", "#E8C167", "#D67500", "#913640", "#1D0B14"]
 scale = np.linspace(0, monuments_df['aantal_monumenten_binnen_categorie'].max(), len(col_list)+1)
 
-# Choropleth zonder style_function
 folium.Choropleth(
     geo_data=monuments_df,
     data=monuments_df,
@@ -44,4 +43,4 @@ folium.Choropleth(
 ).add_to(m)
 
 # Renderen
-st_folium(m, width=1000, height=800)
+st_data = st_folium(m, width=1000, height=800)
