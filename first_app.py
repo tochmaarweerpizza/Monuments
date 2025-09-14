@@ -1,66 +1,36 @@
 import os
 import streamlit as st
-import pandas as pd
 import geopandas as gpd
 import folium
 from streamlit_folium import st_folium
 import numpy as np
 
-# -----------------------
-# Pagina-configuratie
-# -----------------------
-st.set_page_config(
-    page_title="Rijksmonumenten Dashboard",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# -----------------------
 # Data laden
-# -----------------------
 @st.cache_data
 def load_geojson(path):
     return gpd.read_file(path)
 
 monuments_df = load_geojson(os.path.join(os.getcwd(), "monuments_dashboard_data", "municipal_monument_count.geojson"))
-
-# Zorg dat geometrie geldig is en CRS correct
 monuments_df = monuments_df[~monuments_df.geometry.isna()].copy()
 monuments_df = monuments_df.to_crs(epsg=4326)
 
-# -----------------------
-# Bepaal kolom aantal monumenten
-# -----------------------
-# Gebruik hier de eerste numerieke kolom als test (bijv. totaal aantal)
+# Kies een numerieke kolom als test
 numerical_cols = monuments_df.select_dtypes(include=np.number).columns.tolist()
-if len(numerical_cols) == 0:
-    st.error("Geen numerieke kolommen gevonden in geojson!")
-else:
-    monuments_df['aantal_monumenten_binnen_categorie'] = monuments_df[numerical_cols[0]]
+monuments_df['aantal_monumenten_binnen_categorie'] = monuments_df[numerical_cols[0]]
 
-# -----------------------
-# Bepaal middelpunt en zoom
-# -----------------------
-x_center_coord = monuments_df.geometry.centroid.x.median()
-y_center_coord = monuments_df.geometry.centroid.y.median()
-zoomstart = 7.5
+# Bereken middelpunt via bounds
+bounds = monuments_df.total_bounds  # [minx, miny, maxx, maxy]
+x_center_coord = (bounds[0] + bounds[2]) / 2
+y_center_coord = (bounds[1] + bounds[3]) / 2
 
-# -----------------------
-# Folium kaart
-# -----------------------
-m = folium.Map(
-    location=[y_center_coord, x_center_coord],
-    zoom_start=zoomstart,
-    tiles='CartoDB Positron'
-)
+# Folium map
+m = folium.Map(location=[y_center_coord, x_center_coord], zoom_start=7.5, tiles='CartoDB Positron')
 
-# Kleurenschaal
+# Schaalverdeling
 col_list = ["#FCFFC9", "#E8C167", "#D67500", "#913640", "#1D0B14"]
-
-# Maak schaalverdeling (gelijke intervallen)
 scale = np.linspace(0, monuments_df['aantal_monumenten_binnen_categorie'].max(), len(col_list)+1)
 
-# Choropleth toevoegen
+# Choropleth zonder style_function
 folium.Choropleth(
     geo_data=monuments_df,
     data=monuments_df,
@@ -73,7 +43,5 @@ folium.Choropleth(
     legend_name='Aantal monumenten'
 ).add_to(m)
 
-# -----------------------
-# Kaart renderen
-# -----------------------
-st_data = st_folium(m, width=1000, height=800)
+# Renderen
+st_folium(m, width=1000, height=800)
